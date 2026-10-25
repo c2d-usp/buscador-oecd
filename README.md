@@ -11,11 +11,37 @@ Este projeto foi desenvolvido para criar uma plataforma web de busca para o repo
 O site é dividido em três páginas principais, além de uma área exclusiva para o usuário:
 
 *   **Página de Busca:** Contém o repositório da OECD.ai com ferramentas e métricas. Para alterar o buscador de ferramentas para métricas, basta clicar em "Ferramentas" (localizado no topo, em "Catálogo de Ferramentas"). A página permite salvar ferramentas e métricas em pastas (semelhante ao funcionamento do Pinterest). O botão de salvar fica no canto inferior direito de cada card. O usuário pode salvar itens individualmente ou de forma coletiva por filtro (basta selecionar um filtro e clicar em salvar em todas).
-*   **Página de Comparação:** Permite que o usuário utilize as pastas criadas para atribuir notas e criar uma matriz com o ranking das ferramentas. O ranqueamento utiliza como base a metodologia do artigo intitulado *"Método para Avaliação Multicritério Contextualizada de Ferramentas de Inteligência Artificial"*.
+*   **Página de Comparação:** Permite que o usuário utilize as pastas criadas para atribuir notas e criar uma matriz com o ranking das ferramentas. O ranqueamento segue a metodologia do artigo *"Método para Avaliação Multicritério Contextualizada de Ferramentas de Inteligência Artificial"* (veja [Artigo e metodologia](#-artigo-e-metodologia)).
 *   **Página de Visualização:** Oferece a plotagem automática de diversos dashboards interativos para as pastas criadas pelo usuário, facilitando a análise visual dos dados.
 *   **Área do Usuário:** Pode ser acessada clicando na foto de perfil no canto superior direito. Nela, o usuário pode visualizar suas pastas e seus resultados (como os resultados da metodologia de comparação ou análises de dados salvas usando o botão "Salvar Resumo").
 
 A aplicação utiliza scraping para coletar dados, armazena em SQLite e disponibiliza via API Flask consumida por um frontend React.
+
+---
+
+## 📄 Artigo e metodologia
+
+A Página de Comparação implementa o método proposto no artigo **"Método para Avaliação Multicritério Contextualizada de Ferramentas de Inteligência Artificial"**, de Nicholas Kim, Thais R. Neubauer, Enio A. Blay e Sarajane M. Peres (Universidade de São Paulo). O artigo ainda será publicado; a referência completa será adicionada aqui após a publicação.
+
+O artigo trata a escolha de ferramentas de IA como um problema de decisão multicritério, em que critérios objetivos e subjetivos, às vezes conflitantes, precisam ser pesados de acordo com o contexto de uso. O método tem três etapas:
+
+1. **Pesos dos critérios via AHP (*Analytic Hierarchy Process*):** os critérios são comparados dois a dois e os pesos saem dessa matriz de comparações, com verificação de consistência (Razão de Consistência ≤ 0,10).
+2. **Ranqueamento via WSM (*Weighted Scoring Model*):** cada ferramenta recebe uma nota em cada critério, e a pontuação final é a soma ponderada $S_k = \sum_i p_i \, s_{ik}$.
+3. **Análise em quadrantes:** as ferramentas são posicionadas em um plano com duas dimensões estratégicas, e valores de referência (como as médias da amostra) dividem o plano em quatro quadrantes. No artigo, eles são chamados de Ideais (superior direito), Promissoras (inferior direito), Auxiliares (superior esquerdo) e Não Recomendadas (inferior esquerdo).
+
+No caso de uso do artigo, o método foi aplicado a 43 ferramentas do repositório OECD.AI ligadas à sustentabilidade ambiental, sob a perspectiva ESG (ambiental, social e de governança) do setor bancário. A matriz do AHP se mostrou consistente (RC ≈ 0,029) e gerou os pesos abaixo, que são os mesmos usados pela plataforma:
+
+| Critério no artigo | Peso | Na Página de Comparação |
+|---|---|---|
+| C1 – Impacto ESG | 46,41% | Critério chave (nome configurável, eixo X da matriz) |
+| C2 – Contexto econômico | 20,17% | Contexto |
+| C3 – Integração e transparência | 20,17% | Integ. & Transparência |
+| C4 – Acessibilidade geográfica | 8,88% | Escopo Geográfico |
+| C5 – Maturidade | 4,36% | Maturidade |
+
+Na plataforma, o eixo X da matriz é a nota ponderada do critério chave, o eixo Y é a soma ponderada dos outros quatro critérios e as linhas tracejadas marcam as médias. A escala de notas pode ser escolhida (0–2, 0–5, 0–10 ou 0–100); o artigo usa 0 a 2.
+
+A lista das ferramentas avaliadas no artigo, com as notas, as justificativas e a construção dos quadrantes, está disponível em: https://tinyurl.com/4wb7v7xf
 
 ---
 
@@ -46,10 +72,10 @@ A aplicação utiliza scraping para coletar dados, armazena em SQLite e disponib
         ├── context/
         │   └── AuthContext.jsx
         ├── hooks/
+        │   ├── useFilters.js
         │   ├── useMetrics.js
         │   ├── useMetricsFilters.js
-        │   ├── useTools.js
-        │   └── useToolsFilters.js
+        │   └── useTools.js
         ├── pages/
         │   ├── Busca.jsx
         │   ├── Comparacao.jsx
@@ -57,6 +83,7 @@ A aplicação utiliza scraping para coletar dados, armazena em SQLite e disponib
         │   ├── Home.jsx
         │   ├── Login.jsx
         │   ├── MyFolders.jsx
+        │   ├── MyResults.jsx
         │   ├── Profile.jsx
         │   ├── Signup.jsx
         │   └── Visualizacao.jsx
