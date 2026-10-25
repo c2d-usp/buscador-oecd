@@ -242,7 +242,7 @@ docker compose up -d --build
 
 ## 🤝 Agradecimentos
 
-Este trabalho foi realizado com o apoio do Itaú Unibanco S.A., por meio do Programa de Bolsas Itaú (PBI).
+Este trabalho foi realizado com o apoio do Itaú Unibanco S.A., por meio do Programa de Bolsas Itaú (PBI), no âmbito de um projeto do Instituto de Ciência e Tecnologia Itaú (ICTi).
 
 ---
 
