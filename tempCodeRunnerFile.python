@@ -1,0 +1,125 @@
+import sqlite3
+import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
+
+# ==========================================
+# 1. CONFIGURAÇÃO DO BANCO DE DADOS (SQLITE)
+# ==========================================
+def setup_database():
+    """Cria o banco de dados e a tabela se não existirem."""
+    conn = sqlite3.connect('oecd_tools.db')
+    cursor = conn.cursor()
+    
+    # Criação da tabela
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tools (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            developer TEXT,
+            tags TEXT,
+            country TEXT
+        )
+    ''')
+    conn.commit()
+    return conn
+
+def insert_tool(conn, title, developer, tags, country):
+    """Insere uma nova ferramenta no banco de dados."""
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO tools (title, developer, tags, country)
+        VALUES (?, ?, ?, ?)
+    ''', (title, developer, tags, country))
+    conn.commit()
+
+# ==========================================
+# 2. CONFIGURAÇÃO DO SELENIUM E SCRAPER
+# ==========================================
+def run_scraper():
+    # Configurações do Chrome (você pode adicionar '--headless' para rodar sem abrir a janela)
+    chrome_options = Options()
+    # chrome_options.add_argument('--headless') 
+    
+    # Inicializa o navegador
+    driver = webdriver.Chrome(options=chrome_options)
+    
+    # URL do catálogo da OECD.ai (Ajuste se necessário)
+    url = "https://oecd.ai/en/catalogue/tools"
+    
+    try:
+        print(f"Acessando: {url}")
+        driver.get(url)
+        
+        # Espera até que os elementos dos "cards" carreguem na tela (Espera máxima de 15 segundos)
+        # ATENÇÃO: Atualize o seletor XPath abaixo de acordo com a classe real do card no site
+        wait = WebDriverWait(driver, 15)
+        cards_xpath = "//div[contains(@class, 'card')] | //div[contains(@class, 'MuiCard-root')]" 
+        cards = wait.until(EC.presence_of_all_elements_located((By.XPATH, cards_xpath)))
+        
+        print(f"Encontrados {len(cards)} cards na página atual. Iniciando extração...")
+        
+        conn = setup_database()
+        
+        for index, card in enumerate(cards):
+            # Variáveis iniciais
+            title, developer, tags_str, country = "N/A", "N/A", "N/A", "N/A"
+            
+            # --- 1. TÍTULO ---
+            try:
+                # Exemplo: Procura um H3 ou elemento com classe title
+                title_elem = card.find_element(By.XPATH, ".//h3 | .//div[contains(@class, 'title')]")
+                title = title_elem.text.strip()
+            except NoSuchElementException:
+                pass
+
+            # --- 2. DESENVOLVEDOR ---
+            try:
+                # Exemplo: Procura por span ou parágrafo que contenha "by"
+                dev_elem = card.find_element(By.XPATH, ".//span[contains(text(), 'by')] | .//p[contains(@class, 'author')]")
+                developer = dev_elem.text.strip()
+            except NoSuchElementException:
+                pass
+
+            # --- 3. TAGS ---
+            try:
+                # Exemplo: Procura múltiplos elementos que parecem botões/badges
+                tag_elems = card.find_elements(By.XPATH, ".//span[contains(@class, 'badge')] | .//div[contains(@class, 'MuiChip-root')]")
+                tags_list = [tag.text.strip() for tag in tag_elems if tag.text.strip() != ""]
+                tags_str = ", ".join(tags_list) # Salva como string separada por vírgula no DB
+            except NoSuchElementException:
+                pass
+
+            # --- 4. PAÍS / ORGANIZAÇÃO ---
+            try:
+                # Exemplo: Pode estar em um span específico ou no alt de uma imagem de bandeira
+                country_elem = card.find_element(By.XPATH, ".//span[contains(@class, 'country')] | .//div[contains(@class, 'location')]")
+                country = country_elem.text.strip()
+            except NoSuchElementException:
+                pass
+            
+            # Imprime no console para acompanhamento
+            print(f"--- Ferramenta {index + 1} ---")
+            print(f"Título: {title}")
+            print(f"Desenvolvedor: {developer}")
+            print(f"Tags: {tags_str}")
+            print(f"País: {country}\n")
+            
+            # Salva no banco de dados
+            insert_tool(conn, title, developer, tags_str, country)
+
+        print("Extração concluída e dados salvos no 'oecd_tools.db'!")
+        conn.close()
+
+    except Exception as e:
+        print(f"Ocorreu um erro durante a raspagem: {e}")
+    finally:
+        # Fecha o navegador
+        driver.quit()
+
+if __name__ == "__main__":
+    run_scraper()

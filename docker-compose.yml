@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: oecd-backend
+    shm_size: '2gb'
+    env_file:             
+      - .env
+    volumes:
+      - ./oecd_tools.db:/app/oecd_tools.db
+      - ./oecd_metrics.db:/app/oecd_metrics.db
+      - ./users.db:/app/users.db
+      - uploads_data:/app/uploads
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: oecd-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"       
+    restart: unless-stopped
+    
+volumes:
+  uploads_data:
